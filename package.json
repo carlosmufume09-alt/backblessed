@@ -1,0 +1,24 @@
+{
+  "name": "shells-fashion-backend",
+  "version": "1.0.0",
+  "description": "Backend API - Shells Fashion Elegance (Moçambique)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.6.3",
+    "multer": "^2.1.1",
+    "mysql2": "^3.6.5",
+    "pg": "^8.21.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
