@@ -26,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ================= STATIC FILES =================
 // garante que uploads funcionam sempre
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../frontend/public/uploads')));
 
 // ================= ROUTES =================
 app.use('/api/auth', authRoutes);

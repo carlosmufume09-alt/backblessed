@@ -220,14 +220,20 @@ exports.deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ success: false, message: 'Produto não encontrado' });
     }
+
     const imagePath = product.image;
-    if (imagePath && imagePath.startsWith('/uploads/')) {
-      const fullPath = path.join(__dirname, '../../public', imagePath);
-      fs.unlink(fullPath, (err) => {
-        if (err) console.error('Erro ao deletar imagem:', err);
+    if (imagePath && imagePath.startsWith('/uploads/') && imagePath !== '/uploads/default.png') {
+      const fullPath = path.join(__dirname, '../../frontend/public', imagePath);
+      fs.access(fullPath, fs.constants.F_OK, (accessErr) => {
+        if (!accessErr) {
+          fs.unlink(fullPath, (unlinkErr) => {
+            if (unlinkErr) console.error('Erro ao deletar imagem:', unlinkErr);
+          });
+        }
       });
     }
-    await product.remove();
+
+    await Product.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Produto deletado com sucesso' });
   } catch (error) {
     res.status(500).json({
