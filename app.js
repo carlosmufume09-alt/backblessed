@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -17,7 +18,8 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://teu-front.vercel.app'
+    'https://castilho-ten.vercel.app',
+    'https://www.castilho-ten.vercel.app'
   ],
   credentials: true
 }));
@@ -25,8 +27,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ================= STATIC FILES =================
-// garante que uploads funcionam sempre
-app.use('/uploads', express.static(path.join(__dirname, '../frontend/public/uploads')));
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // ================= ROUTES =================
 app.use('/api/auth', authRoutes);

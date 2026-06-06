@@ -55,7 +55,7 @@ exports.uploadImage = async (req, res) => {
         message: 'Nenhuma imagem fornecida'
       });
     }
-    const filePath = `./uploads/${req.file.filename}`;
+    const filePath = `/uploads/${req.file.filename}`;
     res.status(200).json({
       success: true,
       filePath: filePath,
@@ -223,7 +223,7 @@ exports.deleteProduct = async (req, res) => {
 
     const imagePath = product.image;
     if (imagePath && imagePath.startsWith('/uploads/') && imagePath !== '/uploads/default.png') {
-      const fullPath = path.join(__dirname, '../../frontend/public', imagePath);
+      const fullPath = path.join(__dirname, '../uploads', path.basename(imagePath));
       fs.access(fullPath, fs.constants.F_OK, (accessErr) => {
         if (!accessErr) {
           fs.unlink(fullPath, (unlinkErr) => {

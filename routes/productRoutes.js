@@ -7,7 +7,7 @@ const productController = require('../controllers/productController');
 
 // ================== UPLOADS ==================
 
-const uploadDir = path.join(__dirname, '../../frontend/public/uploads');
+const uploadDir = path.join(__dirname, '../uploads');
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
