@@ -1,7 +1,21 @@
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const path = require('path');
-const fs = require('fs');
+const cloudinaryService = require('../services/cloudinaryService');
+
+const uploadFileToCloudinary = async (file) => {
+  const result = await cloudinaryService.uploadFromBuffer(
+    file.buffer,
+    file.originalname
+  );
+  return {
+    url: result.secure_url,
+    publicId: result.public_id,
+    width: result.width,
+    height: result.height,
+    format: result.format,
+    bytes: result.bytes
+  };
+};
 
 // ========== GET ALL PRODUCTS ==========
 exports.getAllProducts = async (req, res) => {
@@ -46,7 +60,7 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// ========== UPLOAD IMAGE ==========
+// ========== UPLOAD IMAGE (Cloudinary → URL no MongoDB) ==========
 exports.uploadImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -55,19 +69,23 @@ exports.uploadImage = async (req, res) => {
         message: 'Nenhuma imagem fornecida'
       });
     }
-    const filePath = `/uploads/${req.file.filename}`;
+
+    const uploaded = await uploadFileToCloudinary(req.file);
+
     res.status(200).json({
       success: true,
-      filePath: filePath,
-      filename: req.file.filename,
+      filePath: uploaded.url,
+      url: uploaded.url,
+      publicId: uploaded.publicId,
+      width: uploaded.width,
+      height: uploaded.height,
+      format: uploaded.format,
+      bytes: uploaded.bytes,
+      optimizedUrl: cloudinaryService.getOptimizedUrl(uploaded.publicId),
       message: 'Imagem enviada com sucesso'
     });
   } catch (error) {
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Erro ao deletar arquivo:', err);
-      });
-    }
+    console.error('[v0] Erro no upload Cloudinary:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao fazer upload da imagem',
@@ -90,7 +108,7 @@ exports.createProductJSON = async (req, res) => {
       name,
       description: description || '',
       price: parseInt(price),
-      image: image || '/uploads/default.png',
+      image: image || '',
       category,
       stock: stock || 0,
       rating: rating || 4.5,
@@ -115,23 +133,20 @@ exports.createProductJSON = async (req, res) => {
 exports.createProduct = async (req, res) => {
   try {
     const { name, description, price, category, stock } = req.body;
-    let image = '';
+    let image = req.body.image || '';
+
     if (req.file) {
-      image = `/uploads/${req.file.filename}`;
-    } else {
-      image = req.body.image || '/uploads/default.png';
+      const uploaded = await uploadFileToCloudinary(req.file);
+      image = uploaded.url;
     }
+
     if (!name || !price || !category) {
-      if (req.file) {
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.error('Erro ao deletar arquivo:', err);
-        });
-      }
       return res.status(400).json({
         success: false,
         message: 'Nome, preço e categoria são obrigatórios'
       });
     }
+
     const product = await Product.create({
       name,
       description: description || '',
@@ -140,17 +155,14 @@ exports.createProduct = async (req, res) => {
       category,
       stock: stock || 0
     });
+
     res.status(201).json({
       success: true,
       data: product,
       message: 'Produto criado com sucesso'
     });
   } catch (error) {
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Erro ao deletar arquivo:', err);
-      });
-    }
+    console.error('[v0] Erro ao criar produto:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar produto',
@@ -164,21 +176,29 @@ exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price, category, stock } = req.body;
+
     if (!name || !price || !category) {
-      if (req.file) {
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.error('Erro ao deletar arquivo:', err);
-        });
-      }
       return res.status(400).json({
         success: false,
         message: 'Nome, preço e categoria são obrigatórios'
       });
     }
-    let image = req.body.image || '';
-    if (req.file) {
-      image = `/uploads/${req.file.filename}`;
+
+    const existing = await Product.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Produto não encontrado' });
     }
+
+    let image = req.body.image || existing.image;
+
+    if (req.file) {
+      const uploaded = await uploadFileToCloudinary(req.file);
+      if (existing.image && existing.image !== uploaded.url) {
+        await cloudinaryService.deleteByUrl(existing.image).catch(() => {});
+      }
+      image = uploaded.url;
+    }
+
     const product = await Product.findByIdAndUpdate(
       id,
       {
@@ -191,20 +211,14 @@ exports.updateProduct = async (req, res) => {
       },
       { new: true }
     );
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Produto não encontrado' });
-    }
+
     res.status(200).json({
       success: true,
       data: product,
       message: 'Produto atualizado com sucesso'
     });
   } catch (error) {
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Erro ao deletar arquivo:', err);
-      });
-    }
+    console.error('[v0] Erro ao atualizar produto:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao atualizar produto',
@@ -221,15 +235,9 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Produto não encontrado' });
     }
 
-    const imagePath = product.image;
-    if (imagePath && imagePath.startsWith('/uploads/') && imagePath !== '/uploads/default.png') {
-      const fullPath = path.join(__dirname, '../uploads', path.basename(imagePath));
-      fs.access(fullPath, fs.constants.F_OK, (accessErr) => {
-        if (!accessErr) {
-          fs.unlink(fullPath, (unlinkErr) => {
-            if (unlinkErr) console.error('Erro ao deletar imagem:', unlinkErr);
-          });
-        }
+    if (product.image) {
+      await cloudinaryService.deleteByUrl(product.image).catch((err) => {
+        console.error('Erro ao deletar imagem no Cloudinary:', err.message);
       });
     }
 
