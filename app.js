@@ -20,7 +20,7 @@ app.use(cors({
     'http://127.0.0.1:3000',
     'https://castilhoshop.vercel.app',
     'https://www.castilho-ten.vercel.app',
-    'https://castilho-carlos-roberto-robertos-projects.vercel.app'
+    'https://blessedstore.vercel.app'
   ],
   credentials: true
 }));

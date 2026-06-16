@@ -15,11 +15,12 @@ const startServer = async () => {
 ║                                                            ║
 ║   🚀 SHELLS FASHION ELEGANCE - Backend                     ║
 ║                                                            ║
-║   Servidor: http://localhost:${PORT}                        ║
+║   Servidor: http://localhost:${PORT}                          ║
 ║   Local: Maputo, Moçambique                                ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
       `);
+     
     });
 
     server.on('error', (error) => {
